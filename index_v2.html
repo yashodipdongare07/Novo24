@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novo24 - Swipe News</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body { font-family:'Roboto', sans-serif; background:#0d1117; color:#e4e6eb; margin:0; }
+header { background:#161b22; padding:25px; text-align:center; font-size:2.2em; font-weight:700; letter-spacing:1px; }
+header p { font-size:1em; color:#888; margin-top:5px; }
+.category { display:flex; justify-content:center; flex-wrap:wrap; margin:20px 0; }
+.category button { background:#1f1f1f; color:white; border:none; padding:10px 20px; margin:5px; border-radius:5px; cursor:pointer; transition:0.3s; }
+.category button:hover { background:#3a3a3a; }
+.card-container { position:relative; width:90%; max-width:600px; margin:20px auto; }
+.card { background:#161b22; border-radius:10px; padding:20px; box-shadow:0 4px 10px rgba(0,0,0,0.5); position:absolute; width:100%; transition:0.3s; }
+.card h2 { font-size:1.5em; margin-bottom:10px; }
+.card p { font-size:1em; color:#ccc; }
+.card .timestamp { font-size:0.8em; color:#888; margin-bottom:10px; }
+.card button.source { background:#ff4500; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; margin-top:10px; }
+.card button.source:hover { background:#e03e00; }
+</style>
+</head>
+<body>
+
+<header>Novo24 - 24 Hour News</header>
+<p style="text-align:center; color:#888;">Swipe through the latest news by category</p>
+
+<div class="category">
+<button onclick="loadCategory('World')">World</button>
+<button onclick="loadCategory('Business')">Business</button>
+<button onclick="loadCategory('Tech')">Tech</button>
+<button onclick="loadCategory('Sports')">Sports</button>
+</div>
+
+<div class="card-container" id="card-container"></div>
+
+<script>
+// === Configuration ===
+const SHEET_JSON_URL = "https://script.google.com/macros/s/AKfycbxrfrN7-XZSnLjNszMVGwAgmOH8jfCBFTNWedD-mPCmfl1fKgMRk1mvwzAgFBVD1Wg/exec"; 
+let allNews = [];
+let currentCategory = "";
+let index = 0;
+
+// Fetch JSON from Google Sheet
+async function fetchNews() {
+    const res = await fetch(SHEET_JSON_URL);
+    const data = await res.json();
+    allNews = data; // expecting array of {Category,Headline,Description,Source,Timestamp}
+}
+
+// Load news by category
+function loadCategory(category) {
+    currentCategory = category;
+    index = 0;
+    displayCard();
+}
+
+// Display current card
+function displayCard() {
+    const container = document.getElementById("card-container");
+    container.innerHTML = "";
+    const filtered = allNews.filter(n => n.Category === currentCategory);
+    if(filtered.length === 0) {
+        container.innerHTML = "<p style='text-align:center; color:#888;'>No news available</p>";
+        return;
+    }
+    const news = filtered[index % filtered.length]; // infinite swipe
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+        <h2>${news.Headline}</h2>
+        <div class="timestamp">${news.Timestamp}</div>
+        <p>${news.Description}</p>
+        <button class="source" onclick="window.open('${news.Source}','_blank')">Visit Source</button>
+    `;
+    container.appendChild(card);
+
+    // Swipe detection
+    let startX = 0;
+    card.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+    card.addEventListener("touchend", e => {
+        let diff = e.changedTouches[0].clientX - startX;
+        if(diff < -50 || diff > 50) { // swipe left/right
+            index++;
+            displayCard();
+        }
+    });
+}
+
+// Initialize
+fetchNews().then(() => loadCategory('World'));
+</script>
+
+</body>
+</html>
